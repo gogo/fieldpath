@@ -1,5 +1,7 @@
 #Fieldpath
 
+[![Build Status](https://travis-ci.org/gogo/fieldpath.svg)](https://travis-ci.org/gogo/fieldpath)
+
 _pbpath_, is a debugging tool, which allows you to stringify a marshaled protocol buffer on the command line.
 _pbpath_ does not have the protocol buffer definitions compiled in and makes extensive use of the _fieldpath_ library.
 
