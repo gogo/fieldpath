@@ -54,9 +54,3 @@ tests:
 vet:
 	go vet ./...
 	go tool vet --shadow .
-
-drone:
-	sudo apt-get install protobuf-compiler
-	go get -u github.com/gogo/protobuf
-	go get -u github.com/gogo/pbparser
-	(cd $(GOPATH)/src/github.com/gogo/protobuf && make all)
