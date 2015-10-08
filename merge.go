@@ -39,6 +39,14 @@ func (this *errMerge) Error() string {
 	return this.fieldName + " requires merging"
 }
 
+type errLatent struct {
+	fieldName string
+}
+
+func (this *errLatent) Error() string {
+	return this.fieldName + " has latent appending or merging"
+}
+
 // The NoMerge function checks that the marshaled protocol buffer does not require any merging when unmarshaling.
 // When this property holds, streaming processing is possible.
 //
@@ -118,6 +126,55 @@ func NoMerge(buf []byte, descriptorSet *descriptor.FileDescriptorSet, rootPkg st
 			return &errUndefined{rootPkg, rootMsg, field.GetName()}
 		}
 		err = NoMerge(buf[i:i+int(length)], descriptorSet, fieldPkg, fieldMsg)
+		if err != nil {
+			return err
+		}
+		i += int(length)
+	}
+	return nil
+}
+
+func NoLatentAppendingOrMerging(buf []byte, descriptorSet *descriptor.FileDescriptorSet, rootPkg string, rootMsg string) error {
+	msg := descriptorSet.GetMessage(rootPkg, rootMsg)
+	if msg == nil {
+		return &errUndefined{rootPkg, rootMsg, ""}
+	}
+	i := 0
+	var lookingAt int32 = -1
+	seen := make(map[int32]bool)
+	for i < len(buf) {
+		key, n, err := decodeVarint(buf, i)
+		if err != nil {
+			return err
+		}
+		i = i + n
+		fieldNum := int32(key >> 3)
+		wireType := int(key & 0x7)
+		field := getFieldNumber(descriptorSet, rootPkg, rootMsg, msg, fieldNum)
+		if seen[fieldNum] {
+			return &errLatent{msg.GetName() + "." + field.GetName()}
+		}
+		if lookingAt != fieldNum {
+			seen[lookingAt] = true
+			lookingAt = fieldNum
+		}
+		if !field.IsMessage() {
+			i, err = skip(buf, i, wireType)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+		length, n, err := decodeVarint(buf, i)
+		if err != nil {
+			return err
+		}
+		i += n
+		fieldPkg, fieldMsg := descriptorSet.FindMessage(rootPkg, rootMsg, field.GetName())
+		if len(fieldMsg) == 0 {
+			return &errUndefined{rootPkg, rootMsg, field.GetName()}
+		}
+		err = NoLatentAppendingOrMerging(buf[i:i+int(length)], descriptorSet, fieldPkg, fieldMsg)
 		if err != nil {
 			return err
 		}

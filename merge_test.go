@@ -50,6 +50,32 @@ func TestNoMergeNoMerge(t *testing.T) {
 	}
 }
 
+func TestNoLatentNoLatent(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	m := test.NewPopulatedNinRepNative(r, true)
+	data, err := proto.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	err = fieldpath.NoLatentAppendingOrMerging(data, test.ThetestDescription(), "test", "NinRepNative")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestNoLatentNoMerge(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	m := test.NewPopulatedNinOptNative(r, true)
+	data, err := proto.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	err = fieldpath.NoLatentAppendingOrMerging(data, test.ThetestDescription(), "test", "NinOptNative")
+	if err != nil {
+		panic(err)
+	}
+}
+
 func TestNoMergeMerge(t *testing.T) {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	m := test.NewPopulatedNinOptNative(r, true)
@@ -64,6 +90,45 @@ func TestNoMergeMerge(t *testing.T) {
 	data = append(data, key, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	err = fieldpath.NoMerge(data, test.ThetestDescription(), "test", "NinOptNative")
 	if err == nil || !strings.Contains(err.Error(), "NinOptNative.Field1 requires merging") {
+		t.Fatalf("Field1 should require merging")
+	}
+}
+
+func TestNoLatentLatent(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	m := test.NewPopulatedNinRepNative(r, true)
+	if m.Field1 == nil {
+		m.Field1 = []float64{1.1, 1.2}
+	}
+	if m.Field2 == nil {
+		m.Field2 = []float32{1.1, 1.2}
+	}
+	data, err := proto.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	key := byte(uint32(1)<<3 | uint32(1))
+	data = append(data, key, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+	err = fieldpath.NoLatentAppendingOrMerging(data, test.ThetestDescription(), "test", "NinRepNative")
+	if err == nil || !strings.Contains(err.Error(), "NinRepNative.Field1") {
+		t.Fatalf("Field1 should have latent appending")
+	}
+}
+
+func TestNoLatentMerge(t *testing.T) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	m := test.NewPopulatedNinOptNative(r, true)
+	if m.Field1 == nil {
+		m.Field1 = proto.Float64(1.1)
+	}
+	data, err := proto.Marshal(m)
+	if err != nil {
+		panic(err)
+	}
+	key := byte(uint32(1)<<3 | uint32(1))
+	data = append(data, key, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+	err = fieldpath.NoLatentAppendingOrMerging(data, test.ThetestDescription(), "test", "NinOptNative")
+	if err == nil || !strings.Contains(err.Error(), "NinOptNative.Field1") {
 		t.Fatalf("Field1 should require merging")
 	}
 }
